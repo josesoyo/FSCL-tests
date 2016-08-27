@@ -3,6 +3,8 @@
 
 # Custom for Visual Studio
 *.cs     diff=csharp
+*.fs     diff=fsharp
+*.fsx     diff=fsharpscript
 
 # Standard to msysgit
 *.doc	 diff=astextplain
