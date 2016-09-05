@@ -22,12 +22,12 @@ open FSCL.Runtime
 //Then I iterate the the times the vector to sum is longer than the global size creating blocks 
 //
 
-let gsize = (1024*5)
+let gsize = (2048*25)
 let a = Array.init<float32> gsize (fun i -> (float32) i ) 
 let b = Array.init<float32> gsize (fun i -> (float32) -(2*i) ) 
 
 [<ReflectedDefinition;Kernel>]
-let StrangeSum (a:float32[],b:float32[],ws:WorkItemInfo) = 
+let SumByBlocks (a:float32[],b:float32[],ws:WorkItemInfo) = 
     // 
     // Ising localSize was not working
 
@@ -44,9 +44,26 @@ let StrangeSum (a:float32[],b:float32[],ws:WorkItemInfo) =
     out_arr
 
 // define the worksize
-let wi = WorkSize(1024L)
+let wi = WorkSize(2048L)
 
+#time
 // Perfom the sum by blocks
-let c= <@StrangeSum(a,b,wi)@>.Run() //|> fun x -> x.Length/1024//|> Array.filter(fun x -> x<>0.f)
+let c= [|0..30|] |> Array.map(fun _ -> <@ (SumByBlocks(a,b,wi) ) @>.Run() )    // |> ignore
+let c0 = <@ [|0..30|] |> Array.map(fun _ ->  (SumByBlocks(a,b,wi) ) )  @>.Run()// |> ignore
 
-c.[5080..c.Length-1]
+// perform the sum by Fsharp collections use on FSCL
+let c2 =  [|0..30|] |> Array.map(fun _ ->  <@(a,b) ||> Array.map2(fun x y  -> x+y)  @>.Run() )  // |> ignore 
+let c02 = <@  [|0..30|] |> Array.map(fun _ -> (a,b) ||> Array.map2(fun x y  -> x+y)  ) @>.Run() // |> ignore 
+
+// perform the sum by CPU 
+let c3 =[|0..30|] |> Array.map(fun _ -> (a,b) ||> Array.map2(fun x y  -> x+y)) //|> ignore
+                                                                               //
+
+let outOfScript() =
+    printfn "Are all the values the same?\n
+    \tthe are the sum with strangeSum and with Fsharp collections the same?:\n\t\t %b
+    \tthe are sum with strangeSum and witouth FSCL the same?:\n\t\t %b 
+    \n
+    And the methods done with alternative situation of quotation?\n\t\t%b and %b" (c=c2) (c=c3) (c=c0) (c2=c02)
+
+outOfScript() 
